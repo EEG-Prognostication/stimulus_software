@@ -236,18 +236,7 @@ All file paths and timing parameters are defined in `lib/constants.py`. This inc
 
 ## Analysis Tools
 
-Post-session EEG analysis is handled by the companion [`eeg-auditory-stimulus`](https://github.com/EEG-project-capstone/eeg-auditory-stimulus) package, which can be installed separately:
-
-```bash
-pip install git+https://github.com/EEG-project-capstone/eeg-auditory-stimulus.git
-```
-
-This package provides two main analysis modules:
-
-- **`claassen_analysis`** — Cognitive-motor dissociation (CMD) detection using SVM classification of EEG responses to motor commands. Produces cross-validation performance plots, spatial pattern maps, and permutation test results. Based on the approach described in Claassen et al. (2019).
-- **`rodika_modularized`** — Language tracking analysis via inter-trial phase coherence (ITPC) of EEG responses to isochronous speech streams. Generates per-channel and averaged ITPC plots at the word, phrase, and sentence frequencies. Based on the approach described in Sokoliuk et al. (2021).
-
-Analysis results are saved to `patient_data/results/cmd/` and `patient_data/results/lang_tracking/` respectively.
+Post-session EEG analysis is handled by the `analysis/` directory at the repo root. See `analysis/README.md` for setup and usage.
 
 ---
 
@@ -282,5 +271,3 @@ See [LICENSE](LICENSE) for details.
 ## Contact
 
 Dr. Peter Schwab, MD
-
-For more details on the auditory stimulus protocol, see the [stimulus documentation](https://github.com/EEG-project-capstone/brain-waves-2.0/blob/main/doc/EEG-TBI_AuditoryStimulusDetails.pdf).

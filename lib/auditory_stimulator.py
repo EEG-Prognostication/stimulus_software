@@ -155,7 +155,7 @@ class AuditoryStimulator:
     def _generate_oddball_sequence(self, sample_rate: int = AudioParams.SAMPLE_RATE) -> tuple:
         """Generate the complete oddball tone sequence as a single buffer.
 
-        This provides sample-accurate 1000ms onset-to-onset timing by pre-generating
+        This provides sample-accurate onset-to-onset timing by pre-generating
         all tones in a single continuous audio buffer.
 
         Args:
@@ -171,8 +171,10 @@ class AuditoryStimulator:
         full_amp_samples = int(sample_rate * OddballStimParams.TONE_DURATION_MS / 1000.0)
         tone_samples = envelope_samples + full_amp_samples + envelope_samples  # ~1323 samples for 30ms
 
-        # Samples between tone onsets (exactly 1 second = 44100 samples at 44100Hz)
-        onset_interval_samples = sample_rate
+        # Convert the configured onset interval into an exact sample count.
+        onset_interval_samples = int(
+            sample_rate * OddballStimParams.ONSET_INTERVAL_MS / 1000.0
+        )
 
         # Determine tone sequence
         total_tones = OddballStimParams.INITIAL_TONES + OddballStimParams.MAIN_TONES
@@ -232,7 +234,7 @@ class AuditoryStimulator:
 
         logger.info(f"Generated oddball sequence: {total_tones} tones, "
                    f"{len(audio_samples)} samples ({len(audio_samples)/sample_rate:.2f}s), "
-                   f"sample-accurate 1000ms intervals")
+                   f"sample-accurate {OddballStimParams.ONSET_INTERVAL_MS}ms intervals")
 
         return audio_samples, tone_events
 
@@ -492,14 +494,14 @@ class AuditoryStimulator:
         is_command = stim_type in ('right_command', 'left_command')
 
         if is_command:
-            # Each keep+stop pair writes two rows: one for the keep phase and one
-            # for the stop phase.  Both are logged together only after the stop
-            # phase completes (i.e. after STOP_PAUSE_MS elapses).
+            # Each keep+stop pair writes two rows after the stop phase completes.
             #
-            # Keep row: start = keep-audio DAC onset
-            #           end   = stop-audio DAC onset  (= end of keep imagery window)
-            # Stop row: start = stop-audio DAC onset
-            #           end   = stop-audio DAC end + STOP_PAUSE_MS  (= end of rest window)
+            # Keep row: start = keep-audio DAC onset (command issued)
+            #           end   = stop-audio DAC onset (keep period over)
+            #           The 10s imagery window begins at start + keep_audio_duration.
+            # Stop row: start = stop-audio DAC onset (rest command issued)
+            #           end   = stop-audio DAC end + STOP_PAUSE_MS (rest period over)
+            #           The 10s rest window begins at start + stop_audio_duration.
             side = stim.get('side', 'right' if 'right' in stim_type else 'left')
             cycle_num = stim.get('cycle_num', 0)
             total_cycles = stim.get('total_cycles', CommandStimParams.TOTAL_CYCLES)
@@ -516,9 +518,9 @@ class AuditoryStimulator:
                 None
             )
 
-            keep_dac = keep_event.get('dac_onset_time') if keep_event else None
-            stop_dac = stop_event.get('dac_onset_time') if stop_event else None
-            stop_dac_end = stop_event.get('dac_end_time') if stop_event else None
+            keep_dac     = keep_event.get('dac_onset_time') if keep_event else None
+            stop_dac     = stop_event.get('dac_onset_time') if stop_event else None
+            stop_dac_end = stop_event.get('dac_end_time')   if stop_event else None
             stop_end = (stop_dac_end + CommandStimParams.STOP_PAUSE_MS / 1000.0
                         if stop_dac_end is not None else None)
 
@@ -530,8 +532,8 @@ class AuditoryStimulator:
                 result_type=f'{side}_keep',
                 data={
                     'notes': f"{side.capitalize()} keep — {cycle_label}{prompt_note}",
-                    'start_time': keep_dac,
-                    'end_time': stop_dac,
+                    'start_time': keep_dac,   # keep command issued (audio onset)
+                    'end_time':   stop_dac,   # keep period over (stop command issued)
                 }
             )
             self.results_manager.append_result(
@@ -539,8 +541,8 @@ class AuditoryStimulator:
                 result_type=f'{side}_stop',
                 data={
                     'notes': f"{side.capitalize()} stop — {cycle_label}",
-                    'start_time': stop_dac,
-                    'end_time': stop_end,
+                    'start_time': stop_dac,   # stop command issued (audio onset)
+                    'end_time':   stop_end,   # rest period over
                 }
             )
             return

@@ -25,6 +25,7 @@ class OddballStimParams:
     """Parameters for oddball stimuli."""
     INITIAL_TONES = 5
     MAIN_TONES = 20
+    ONSET_INTERVAL_MS = 1000      # Tone onset-to-onset interval
     TONE_DURATION_MS = 20          # Full-amplitude duration (envelope adds to this)
     STANDARD_FREQ = 1000           # Hz
     RARE_FREQ = 2000               # Hz
@@ -205,5 +206,4 @@ class LoggingParams:
     MAX_LOG_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
     BACKUP_COUNT = 5
     LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-
 

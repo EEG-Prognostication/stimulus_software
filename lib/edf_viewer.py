@@ -27,10 +27,14 @@ logger = logging.getLogger('eeg_stimulus.edf_viewer')
 # Colors per stimulus type for event annotations
 STIM_COLORS = {
     'language':       '#2196F3',   # blue
-    'right_command':  '#4CAF50',   # green
+    'right_command':  '#4CAF50',   # green (runs schema)
     'right_command+p':'#4CAF50',
-    'left_command':   '#9C27B0',   # purple
+    'left_command':   '#9C27B0',   # purple (runs schema)
     'left_command+p': '#9C27B0',
+    'right_keep':     '#4CAF50',   # green (pairs schema)
+    'right_stop':     '#81C784',   # light green
+    'left_keep':      '#9C27B0',   # purple (pairs schema)
+    'left_stop':      '#CE93D8',   # light purple
     'oddball':        '#FF9800',   # orange
     'oddball+p':      '#FF9800',
     'familiar':       '#E91E63',   # magenta

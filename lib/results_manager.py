@@ -257,7 +257,8 @@ class ResultsManager:
         stimulus_types = {
             'language', 'right_command', 'right_command+p',
             'left_command', 'left_command+p', 'oddball', 'oddball+p',
-            'familiar', 'unfamiliar'
+            'familiar', 'unfamiliar',
+            'right_keep', 'right_stop', 'left_keep', 'left_stop',
         }
         
         stimuli = []

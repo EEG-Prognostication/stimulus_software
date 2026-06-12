@@ -157,12 +157,13 @@ class TestAppendSyncPulse:
     def test_append_sync_pulse(self, results_manager):
         """append_sync_pulse should create a manual_sync_pulse entry."""
         sync_time = time.time()
-        filepath = results_manager.append_sync_pulse('PATIENT001', sync_time)
+        sync_dac_time = 12345.678
+        filepath = results_manager.append_sync_pulse('PATIENT001', sync_time, sync_dac_time)
 
         df = pd.read_csv(filepath)
         assert len(df) == 1
         assert df.iloc[0]['stim_type'] == 'manual_sync_pulse'
-        assert df.iloc[0]['start_time'] == sync_time
+        assert df.iloc[0]['start_time'] == sync_dac_time
 
 class TestReadResults:
     """Tests for read_results method."""

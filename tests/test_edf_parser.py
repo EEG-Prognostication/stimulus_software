@@ -80,8 +80,6 @@ class TestEDFParserInit:
         parser = EDFParser(str(temp_dir / 'test.edf'))
         assert parser.edf_path == temp_dir / 'test.edf'
         assert parser.raw is None
-        assert parser.sync_sample is None
-        assert parser.sync_time is None
 
     def test_accepts_path_object(self, temp_dir):
         """EDFParser should accept Path objects."""
@@ -162,7 +160,7 @@ class TestLoadEDF:
         with pytest.raises(EDFFileError, match='not found'):
             parser.load_edf()
 
-    @patch('lib.edf_parser.mne.io.read_raw_edf')
+    @patch('mne.io.read_raw_edf')
     def test_load_calls_mne(self, mock_read_raw, minimal_edf_file):
         """load_edf should call MNE's read_raw_edf."""
         mock_raw = MagicMock()
@@ -176,7 +174,7 @@ class TestLoadEDF:
         mock_read_raw.assert_called_once()
         assert parser.raw is mock_raw
 
-    @patch('lib.edf_parser.mne.io.read_raw_edf')
+    @patch('mne.io.read_raw_edf')
     def test_load_mne_error_raises(self, mock_read_raw, minimal_edf_file):
         """load_edf should raise EDFFileError if MNE fails."""
         mock_read_raw.side_effect = Exception("MNE internal error")
@@ -194,7 +192,7 @@ class TestGetInfoSummary:
         with pytest.raises(RuntimeError, match='not loaded'):
             parser.get_info_summary()
 
-    @patch('lib.edf_parser.mne.io.read_raw_edf')
+    @patch('mne.io.read_raw_edf')
     def test_summary_contains_expected_keys(self, mock_read_raw, minimal_edf_file):
         """get_info_summary should return dict with expected keys."""
         mock_raw = MagicMock()
@@ -223,7 +221,7 @@ class TestGetInfoSummary:
         assert 'header_info' in summary
         assert 'channel_types' in summary
 
-    @patch('lib.edf_parser.mne.io.read_raw_edf')
+    @patch('mne.io.read_raw_edf')
     def test_duration_formatting(self, mock_read_raw, minimal_edf_file):
         """get_info_summary should format duration correctly."""
         mock_raw = MagicMock()
@@ -265,7 +263,7 @@ class TestFormatDuration:
 class TestExtractSubjectInfo:
     """Tests for _extract_subject_info method."""
 
-    @patch('lib.edf_parser.mne.io.read_raw_edf')
+    @patch('mne.io.read_raw_edf')
     def test_extracts_from_mne_info(self, mock_read_raw, minimal_edf_file):
         """_extract_subject_info should extract from MNE subject_info."""
         mock_raw = MagicMock()
@@ -285,7 +283,7 @@ class TestExtractSubjectInfo:
 
         assert subject['id'] == 'SUBJ001'
 
-    @patch('lib.edf_parser.mne.io.read_raw_edf')
+    @patch('mne.io.read_raw_edf')
     def test_falls_back_to_header(self, mock_read_raw, minimal_edf_file):
         """_extract_subject_info should fall back to header info."""
         mock_raw = MagicMock()
@@ -305,7 +303,7 @@ class TestExtractSubjectInfo:
 class TestGetChannelTypeSummary:
     """Tests for _get_channel_type_summary method."""
 
-    @patch('lib.edf_parser.mne.io.read_raw_edf')
+    @patch('mne.io.read_raw_edf')
     def test_summarizes_channel_types(self, mock_read_raw, minimal_edf_file):
         """_get_channel_type_summary should count channel types."""
         mock_raw = MagicMock()
@@ -322,7 +320,7 @@ class TestGetChannelTypeSummary:
         assert types.get('eeg') == 2
         assert types.get('ecg') == 1
 
-    @patch('lib.edf_parser.mne.io.read_raw_edf')
+    @patch('mne.io.read_raw_edf')
     def test_handles_exception(self, mock_read_raw, minimal_edf_file):
         """_get_channel_type_summary should return empty dict on error."""
         mock_raw = MagicMock()

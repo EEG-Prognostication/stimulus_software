@@ -614,6 +614,15 @@ class TkApp:
         self.csv_info_text.config(state='disabled')
     
     
+    def randomize_stims(self):
+        """Re-randomize the order of prepared stimuli."""
+        if not self.stims.stim_dictionary:
+            return
+
+        self.stims.randomize_stim_order()
+        self.populate_stim_list()
+        logger.info("Stimulus order randomized")
+
     def populate_stim_list(self):
         """Populate the stimulus list Treeview."""
         logger.debug(f"Populating stimulus list with "
@@ -696,31 +705,31 @@ class TkApp:
         state_configs = {
             PlaybackState.EMPTY: {
                 'prepare': 'disabled', 'play': 'disabled',
-                'pause': 'disabled', 'stop': 'disabled', 'sync': 'disabled'
+                'pause': 'disabled', 'stop': 'disabled', 'sync': 'disabled', 'randomize': 'disabled'
             },
             PlaybackState.READY: {
                 'prepare': 'normal', 'play': 'normal',
-                'pause': 'disabled', 'stop': 'disabled', 'sync': 'normal'
+                'pause': 'disabled', 'stop': 'disabled', 'sync': 'normal', 'randomize': 'normal'
             },
             PlaybackState.PREPARING: {
                 'prepare': 'disabled', 'play': 'disabled',
-                'pause': 'disabled', 'stop': 'disabled', 'sync': 'disabled'
+                'pause': 'disabled', 'stop': 'disabled', 'sync': 'disabled', 'randomize': 'disabled'
             },
             PlaybackState.PAUSED: {
                 'prepare': 'disabled', 'play': 'disabled',
-                'pause': 'normal', 'stop': 'normal', 'sync': 'disabled'
+                'pause': 'normal', 'stop': 'normal', 'sync': 'disabled', 'randomize': 'disabled'
             },
             PlaybackState.PLAYING: {
                 'prepare': 'disabled', 'play': 'disabled',
-                'pause': 'normal', 'stop': 'normal', 'sync': 'disabled'
+                'pause': 'normal', 'stop': 'normal', 'sync': 'disabled', 'randomize': 'disabled'
             },
             PlaybackState.STOPPED: {
                 'prepare': 'normal', 'play': 'normal',
-                'pause': 'disabled', 'stop': 'disabled', 'sync': 'normal'
+                'pause': 'disabled', 'stop': 'disabled', 'sync': 'normal', 'randomize': 'normal'
             },
             PlaybackState.SENDING_SYNC: {
                 'prepare': 'disabled', 'play': 'disabled',
-                'pause': 'disabled', 'stop': 'disabled', 'sync': 'disabled'
+                'pause': 'disabled', 'stop': 'disabled', 'sync': 'disabled', 'randomize': 'disabled'
             },
         }
 
@@ -729,11 +738,14 @@ class TkApp:
             state_configs[PlaybackState.EMPTY]
         )
 
+        has_stims = len(self.stims.stim_dictionary) > 0
+
         self._apply_ctrl_btn(self.prepare_button,   states['prepare'] == 'normal')
         self._apply_ctrl_btn(self.play_button,       states['play']    == 'normal')
         self._apply_ctrl_btn(self.pause_button,      states['pause']   == 'normal')
         self._apply_ctrl_btn(self.stop_button,       states['stop']    == 'normal')
         self._apply_ctrl_btn(self.sync_pulse_button, states['sync']    == 'normal')
+        self._apply_ctrl_btn(self.randomize_button,  states['randomize'] == 'normal' and has_stims)
     
     def load_file_options(self):
         """Populate file selection dropdowns."""
@@ -1038,6 +1050,13 @@ class TkApp:
         )
         self.prepare_button.pack(side='left', padx=5, ipady=4)
 
+        self.randomize_button = tk.Button(
+            control_frame,
+            text="Randomize Order",
+            command=self.randomize_stims
+        )
+        self.randomize_button.pack(side='left', padx=5, ipady=4)
+
         self.sync_pulse_button = tk.Button(
             control_frame,
             text="Send Sync Pulse",
@@ -1065,7 +1084,7 @@ class TkApp:
             command=self.toggle_pause
         )
         self.pause_button.pack(side='left', padx=5, ipady=4)
-    
+
     def _build_sequence_and_notes(self, parent):
         """Build side-by-side stimulus sequence list and session notes."""
         container = ttk.Frame(parent)

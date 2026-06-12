@@ -216,9 +216,14 @@ class Stims:
             voice_block = []
             for _ in range(n_familiar):
                 voice_block.append({"type": "familiar", "status": "pending"})
-            for _ in range(n_unfamiliar):
-                voice_index = random.randrange(len(self.unfamiliar_voices_audio))
+
+            # Distribute unfamiliar trials evenly across control voices, then shuffle
+            n_voices = len(self.unfamiliar_voices_audio)
+            voice_indices = [i % n_voices for i in range(n_unfamiliar)]
+            random.shuffle(voice_indices)
+            for voice_index in voice_indices:
                 voice_block.append({"type": "unfamiliar", "voice_index": voice_index, "status": "pending"})
+
             random.shuffle(voice_block)
             blocks.append(voice_block)
             logger.debug(f"Added {len(voice_block)} voice stimuli ({n_familiar} familiar, {n_unfamiliar} unfamiliar)")
@@ -239,6 +244,15 @@ class Stims:
             stim_type = stim['type']
             stim_summary[stim_type] = stim_summary.get(stim_type, 0) + 1
         logger.info(f"Stimulus type summary: {stim_summary}")
+
+    def randomize_stim_order(self):
+        """Re-shuffle the order of prepared stimuli.
+
+        Each stim dict (including each command keep+stop pair) is an
+        independent trial, so the full list can be shuffled directly.
+        """
+        random.shuffle(self.stim_dictionary)
+        logger.info(f"Stimulus order randomized: {len(self.stim_dictionary)} stimuli")
 
     def _generate_language_stimuli(self, num_of_lang_stims):
         """Generate the specified number of language stimuli"""

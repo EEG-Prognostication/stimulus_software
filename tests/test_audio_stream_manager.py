@@ -325,7 +325,7 @@ class TestShutdown:
     def test_shutdown_closes_stream(self):
         manager, mock_stream, _ = _make_asm()
         manager.shutdown()
-        mock_stream.stop.assert_called_once()
+        mock_stream.abort.assert_called_once()
         mock_stream.close.assert_called_once()
 
     def test_shutdown_clears_stream_reference(self):
@@ -336,7 +336,7 @@ class TestShutdown:
     def test_del_calls_shutdown(self):
         manager, mock_stream, _ = _make_asm()
         manager.__del__()
-        mock_stream.stop.assert_called()
+        mock_stream.abort.assert_called()
         mock_stream.close.assert_called()
 
     def test_double_shutdown_is_safe(self):

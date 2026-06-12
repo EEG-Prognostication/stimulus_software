@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from lib.stims import Stims
-from lib.constants import FilePaths
+from lib.constants import FilePaths, CommandStimParams
 
 @pytest.fixture
 def stims_temp_dir():
@@ -37,7 +37,6 @@ class TestStimsInit:
         assert stims_instance.current_stim_index is None
         assert stims_instance.lang_audio == []
         assert stims_instance.lang_stims_ids == []
-        assert stims_instance.sample_rate == 44100
 
     def test_initialization_clears_audio(self, stims_instance):
         """Stims should initialize with null audio references."""
@@ -102,25 +101,25 @@ class TestCommandStimuli:
 
     @patch('lib.stims.AudioSegment.from_mp3')
     def test_generate_right_command_stimuli(self, mock_from_mp3, stims_instance):
-        """generate_stims should create right command stimuli."""
+        """generate_stims should create one right command pair per cycle."""
         mock_from_mp3.return_value = MagicMock()
 
         stims_instance.generate_stims({"rcmd": 2})
 
         rcmd_stims = [s for s in stims_instance.stim_dictionary if s['type'] == 'right_command']
-        assert len(rcmd_stims) == 2
+        assert len(rcmd_stims) == 2 * CommandStimParams.TOTAL_CYCLES
         assert stims_instance.right_keep_audio is not None
         assert stims_instance.right_stop_audio is not None
 
     @patch('lib.stims.AudioSegment.from_mp3')
     def test_generate_left_command_stimuli(self, mock_from_mp3, stims_instance):
-        """generate_stims should create left command stimuli."""
+        """generate_stims should create one left command pair per cycle."""
         mock_from_mp3.return_value = MagicMock()
 
         stims_instance.generate_stims({"lcmd": 3})
 
         lcmd_stims = [s for s in stims_instance.stim_dictionary if s['type'] == 'left_command']
-        assert len(lcmd_stims) == 3
+        assert len(lcmd_stims) == 3 * CommandStimParams.TOTAL_CYCLES
 
 class TestLanguageStimuli:
     """Tests for language stimulus generation."""
@@ -312,6 +311,52 @@ class TestBlockRandomization:
         if lang_indices:
             for i in range(len(lang_indices) - 1):
                 assert lang_indices[i + 1] - lang_indices[i] == 1
+
+class TestRandomizeStimOrder:
+    """Tests for randomize_stim_order."""
+
+    @patch('lib.stims.AudioSegment.from_mp3')
+    @patch.object(Stims, '_random_lang_stim')
+    def test_preserves_total_count_and_types(self, mock_random_lang, mock_from_mp3, stims_instance):
+        """Randomizing should not add, drop, or change any stimuli."""
+        mock_from_mp3.return_value = MagicMock()
+        stims_instance.generate_stims({"lang": 3, "odd": 5, "rcmd": 2})
+
+        before = sorted(s['type'] for s in stims_instance.stim_dictionary)
+        stims_instance.randomize_stim_order()
+        after = sorted(s['type'] for s in stims_instance.stim_dictionary)
+
+        assert before == after
+        assert len(stims_instance.stim_dictionary) == 3 + 5 + 16
+
+    @patch('lib.stims.AudioSegment.from_mp3')
+    def test_command_pairs_can_be_interleaved(self, mock_from_mp3, stims_instance):
+        """Each command keep+stop pair should be independently movable, not bound to its run."""
+        mock_from_mp3.return_value = MagicMock()
+        stims_instance.generate_stims({"rcmd": 2, "lcmd": 2})
+
+        found_interleaved = False
+        for _ in range(20):
+            stims_instance.randomize_stim_order()
+            types = [s['type'] for s in stims_instance.stim_dictionary]
+            # An interleaved ordering has a left/right run broken up by the other side
+            if any(types[i] != types[i + 1] for i in range(len(types) - 1)):
+                found_interleaved = True
+                break
+
+        assert found_interleaved
+
+    @patch.object(Stims, '_random_lang_stim')
+    def test_single_trial_stims_can_be_reordered(self, mock_random_lang, stims_instance):
+        """Single-trial stims (e.g. language/oddball) should be independently movable."""
+        stims_instance.generate_stims({"lang": 5, "odd": 5})
+
+        orders = set()
+        for _ in range(10):
+            stims_instance.randomize_stim_order()
+            orders.add(tuple(s['type'] for s in stims_instance.stim_dictionary))
+
+        assert len(orders) > 1
 
 class TestVoiceStimuli:
     """Tests for familiar/unfamiliar voice stimulus generation."""

@@ -184,10 +184,13 @@ class AuditoryStimulator:
         for _ in range(OddballStimParams.INITIAL_TONES):
             tone_sequence.append(('standard', OddballStimParams.STANDARD_FREQ))
 
-        # Main sequence has random rare tones
-        for _ in range(OddballStimParams.MAIN_TONES):
-            is_rare = random.random() < OddballStimParams.RARE_PROBABILITY
-            if is_rare:
+        # Main sequence: exact ratio of rare/standard tones, randomly ordered
+        n_rare = round(OddballStimParams.MAIN_TONES * OddballStimParams.RARE_PROBABILITY)
+        main_types = (['rare'] * n_rare
+                      + ['standard'] * (OddballStimParams.MAIN_TONES - n_rare))
+        random.shuffle(main_types)
+        for tone_type in main_types:
+            if tone_type == 'rare':
                 tone_sequence.append(('rare', OddballStimParams.RARE_FREQ))
             else:
                 tone_sequence.append(('standard', OddballStimParams.STANDARD_FREQ))

@@ -24,12 +24,12 @@ class CommandStimParams:
 class OddballStimParams:
     """Parameters for oddball stimuli."""
     INITIAL_TONES = 5
-    MAIN_TONES = 20
-    ONSET_INTERVAL_MS = 1000      # Tone onset-to-onset interval
+    MAIN_TONES = 25
+    ONSET_INTERVAL_MS = 1100      # Tone onset-to-onset interval
     TONE_DURATION_MS = 20          # Full-amplitude duration (envelope adds to this)
     STANDARD_FREQ = 1000           # Hz
     RARE_FREQ = 2000               # Hz
-    RARE_PROBABILITY = 0.2
+    RARE_PROBABILITY = 0.24
     PROMPT_DELAY_MS = 2000
     TONE_AMPLITUDE = 1.0           # 0.0 to 1.0
     TONE_ENVELOPE_MS = 5           # Fade in/out duration to eliminate clicks
@@ -53,8 +53,8 @@ DEFAULT_STIMULUS_COUNTS = {
     'language': 72,
     'command_no_prompt': 3,
     'command_with_prompt': 3,
-    'oddball_no_prompt': 4,
-    'oddball_with_prompt': 4,
+    'oddball_no_prompt': 8,
+    'oddball_with_prompt': 8,
     'familiar_voice': 50
 }
 

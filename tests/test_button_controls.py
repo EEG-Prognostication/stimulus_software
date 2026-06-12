@@ -109,15 +109,16 @@ class TestOddballSequenceGeneration:
         assert len(tone_events) == expected
 
     def test_sample_accurate_intervals(self):
-        """Every onset-to-onset interval should be exactly 44100 samples (1 second)."""
+        """Every onset-to-onset interval should match ONSET_INTERVAL_MS exactly."""
         stimulator = AuditoryStimulator(gui_callback=MockGuiCallback())
         _, tone_events = stimulator._generate_oddball_sequence(44100)
 
+        expected_interval = int(44100 * OddballStimParams.ONSET_INTERVAL_MS / 1000.0)
         intervals = [
             tone_events[i]['onset_sample'] - tone_events[i - 1]['onset_sample']
             for i in range(1, len(tone_events))
         ]
-        assert all(iv == 44100 for iv in intervals)
+        assert all(iv == expected_interval for iv in intervals)
 
     def test_initial_tones_are_standard(self):
         """First INITIAL_TONES entries must all be 'standard'."""

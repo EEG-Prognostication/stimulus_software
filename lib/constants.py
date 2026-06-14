@@ -16,23 +16,18 @@ from pathlib import Path
 class CommandStimParams:
     """Parameters for motor command stimuli."""
     TOTAL_CYCLES = 8
-    KEEP_PAUSE_MS = 10000  # 10 seconds
-    STOP_PAUSE_MS = 10000  # 10 seconds
-    PROMPT_DELAY_MS = 2000  # 2 seconds
 
 
 class OddballStimParams:
     """Parameters for oddball stimuli."""
     INITIAL_TONES = 5
     MAIN_TONES = 25
-    ONSET_INTERVAL_MS = 1100      # Tone onset-to-onset interval
-    TONE_DURATION_MS = 20          # Full-amplitude duration (envelope adds to this)
-    STANDARD_FREQ = 1000           # Hz
-    RARE_FREQ = 2000               # Hz
+    TONE_DURATION_MS = 20           # Full-amplitude duration (envelope adds to this)
+    STANDARD_FREQ = 1000            # Hz
+    RARE_FREQ = 2000                # Hz
     RARE_PROBABILITY = 0.24
-    PROMPT_DELAY_MS = 2000
-    TONE_AMPLITUDE = 1.0           # 0.0 to 1.0
-    TONE_ENVELOPE_MS = 5           # Fade in/out duration to eliminate clicks
+    TONE_AMPLITUDE = 1.0            # 0.0 to 1.0
+    TONE_ENVELOPE_MS = 5            # Fade in/out duration to eliminate clicks
 
 
 class LanguageStimParams:
@@ -40,13 +35,27 @@ class LanguageStimParams:
     SENTENCES_PER_STIMULUS = 12
 
 
-class TimingParams:
-    """Inter-stimulus timing parameters."""
-    INTER_STIMULUS_JITTER = False       # If False, use INTER_STIMULUS_FIXED_MS instead
-    INTER_STIMULUS_FIXED_MS = 1500      # Used when INTER_STIMULUS_JITTER is False
-    INTER_STIMULUS_MIN_MS = 1200        # Minimum delay between stimuli (jitter mode)
-    INTER_STIMULUS_MAX_MS = 2200        # Maximum delay between stimuli (jitter mode)
-    CALLBACK_RETRY_DELAY_MS = 100       # Delay for retry callbacks
+class PostStimulusWaitMS:
+    """Wait (ms) after each stimulus event, before the next one begins."""
+    # Oddball: ODDBALL_PROMPT (if +p) follows the prompt audio, before the
+    # tone sequence starts. ODDBALL_TONE is the silence after each tone,
+    # before the next one begins, within the pre-generated sequence buffer.
+    ODDBALL_PROMPT = 2000
+    ODDBALL_TONE   = 1100
+
+    # Motor command: COMMAND_PROMPT (if +p) follows the prompt audio, before
+    # the keep instruction. COMMAND_KEEP follows the keep instruction,
+    # COMMAND_STOP follows the stop instruction -- both are applied within
+    # every keep+stop pair (20s total).
+    COMMAND_PROMPT = 2000
+    COMMAND_KEEP   = 10000
+    COMMAND_STOP   = 10000
+
+    # Language / voice: this wait follows each clip, before the next
+    # stim_dictionary entry begins.
+    LANGUAGE   = 1500
+    FAMILIAR   = 2000
+    UNFAMILIAR = 2000
 
 
 DEFAULT_STIMULUS_COUNTS = {

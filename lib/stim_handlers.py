@@ -10,7 +10,7 @@ import random
 import numpy as np
 import logging
 from lib.base_stim_handler import BaseStimHandler
-from lib.constants import CommandStimParams, OddballStimParams, AudioParams
+from lib.constants import CommandStimParams, OddballStimParams, AudioParams, PostStimulusWaitMS
 
 logger = logging.getLogger('eeg_stimulus.handlers')
 
@@ -99,7 +99,7 @@ class CommandStimHandler(BaseStimHandler):
         )
 
     def _after_prompt(self):
-        self.safe_schedule(CommandStimParams.PROMPT_DELAY_MS, self._play_keep_command)
+        self.safe_schedule(PostStimulusWaitMS.COMMAND_PROMPT, self._play_keep_command)
 
     def _play_keep_command(self):
         if not self.is_active:
@@ -120,7 +120,7 @@ class CommandStimHandler(BaseStimHandler):
         )
 
     def _after_keep_command(self):
-        self.safe_schedule(CommandStimParams.KEEP_PAUSE_MS, self._play_stop_command)
+        self.safe_schedule(PostStimulusWaitMS.COMMAND_KEEP, self._play_stop_command)
 
     def _play_stop_command(self):
         if not self.is_active:
@@ -142,7 +142,7 @@ class CommandStimHandler(BaseStimHandler):
 
     def _after_stop_command(self):
         # Wait out the rest period, then the pair is complete.
-        self.safe_schedule(CommandStimParams.STOP_PAUSE_MS, self.safe_finish)
+        self.safe_schedule(PostStimulusWaitMS.COMMAND_STOP, self.safe_finish)
 
     def continue_stim(self):
         """Not used — pairs are driven by the stim_dictionary."""
@@ -194,7 +194,7 @@ class OddballStimHandler(BaseStimHandler):
 
     def _after_prompt(self):
         """Called after prompt finishes."""
-        self.safe_schedule(OddballStimParams.PROMPT_DELAY_MS, self._start_sequence)
+        self.safe_schedule(PostStimulusWaitMS.ODDBALL_PROMPT, self._start_sequence)
 
     def _start_sequence(self):
         """Generate and play the complete oddball sequence as a single buffer."""

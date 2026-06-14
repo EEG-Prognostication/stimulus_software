@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from lib.auditory_stimulator import AuditoryStimulator
-from lib.constants import PlaybackState, OddballStimParams
+from lib.constants import PlaybackState, OddballStimParams, PostStimulusWaitMS
 from tests.conftest import MockGuiCallback
 
 
@@ -109,11 +109,16 @@ class TestOddballSequenceGeneration:
         assert len(tone_events) == expected
 
     def test_sample_accurate_intervals(self):
-        """Every onset-to-onset interval should match ONSET_INTERVAL_MS exactly."""
+        """Every onset-to-onset interval should equal the tone duration plus ODDBALL_TONE silence."""
         stimulator = AuditoryStimulator(gui_callback=MockGuiCallback())
         _, tone_events = stimulator._generate_oddball_sequence(44100)
 
-        expected_interval = int(44100 * OddballStimParams.ONSET_INTERVAL_MS / 1000.0)
+        envelope_samples = int(44100 * OddballStimParams.TONE_ENVELOPE_MS / 1000.0)
+        full_amp_samples = int(44100 * OddballStimParams.TONE_DURATION_MS / 1000.0)
+        tone_samples = envelope_samples + full_amp_samples + envelope_samples
+        silence_samples = int(44100 * PostStimulusWaitMS.ODDBALL_TONE / 1000.0)
+        expected_interval = tone_samples + silence_samples
+
         intervals = [
             tone_events[i]['onset_sample'] - tone_events[i - 1]['onset_sample']
             for i in range(1, len(tone_events))

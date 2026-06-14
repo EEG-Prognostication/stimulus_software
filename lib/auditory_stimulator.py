@@ -21,7 +21,7 @@ from lib.stim_handlers import (
     VoiceStimHandler
 )
 from pathlib import Path
-from lib.constants import (SyncPulseParams, TimingParams, OddballStimParams, AudioParams,
+from lib.constants import (SyncPulseParams, PostStimulusWaitMS, OddballStimParams, AudioParams,
                            CommandStimParams, MALE_CONTROL_VOICES, FEMALE_CONTROL_VOICES)
 from lib.exceptions import AudioError
 from lib.logging_utils import log_operation
@@ -171,10 +171,11 @@ class AuditoryStimulator:
         full_amp_samples = int(sample_rate * OddballStimParams.TONE_DURATION_MS / 1000.0)
         tone_samples = envelope_samples + full_amp_samples + envelope_samples  # ~1323 samples for 30ms
 
-        # Convert the configured onset interval into an exact sample count.
-        onset_interval_samples = int(
-            sample_rate * OddballStimParams.ONSET_INTERVAL_MS / 1000.0
-        )
+        # ODDBALL_TONE is the silence after each tone, not the onset-to-onset
+        # interval -- add it to the tone's own duration so every tone gets
+        # the same silence regardless of its length.
+        silence_samples = int(sample_rate * PostStimulusWaitMS.ODDBALL_TONE / 1000.0)
+        onset_interval_samples = tone_samples + silence_samples
 
         # Determine tone sequence
         total_tones = OddballStimParams.INITIAL_TONES + OddballStimParams.MAIN_TONES
@@ -237,7 +238,7 @@ class AuditoryStimulator:
 
         logger.info(f"Generated oddball sequence: {total_tones} tones, "
                    f"{len(audio_samples)} samples ({len(audio_samples)/sample_rate:.2f}s), "
-                   f"sample-accurate {OddballStimParams.ONSET_INTERVAL_MS}ms intervals")
+                   f"sample-accurate {PostStimulusWaitMS.ODDBALL_TONE}ms silence after each tone")
 
         return audio_samples, tone_events
 
@@ -419,15 +420,12 @@ class AuditoryStimulator:
         self.gui_callback.update_stim_list_status()
         self.stims.current_stim_index += 1
 
-        # Inter-stimulus delay
-        if TimingParams.INTER_STIMULUS_JITTER:
-            delay = random.randint(
-                TimingParams.INTER_STIMULUS_MIN_MS,
-                TimingParams.INTER_STIMULUS_MAX_MS
-            )
-        else:
-            delay = TimingParams.INTER_STIMULUS_FIXED_MS
-        logger.debug(f"Inter-stimulus delay: {delay}ms")
+        delay = {
+            'language':   PostStimulusWaitMS.LANGUAGE,
+            'familiar':   PostStimulusWaitMS.FAMILIAR,
+            'unfamiliar': PostStimulusWaitMS.UNFAMILIAR,
+        }.get(stim_type, 0)
+        logger.debug(f"Post-stimulus wait for {stim_type}: {delay}ms")
         self._schedule(delay, self.continue_playback)
 
     def _save_oddball_results(self, patient_id: str, stim_type: str):
@@ -503,7 +501,7 @@ class AuditoryStimulator:
             #           end   = stop-audio DAC onset (keep period over)
             #           The 10s imagery window begins at start + keep_audio_duration.
             # Stop row: start = stop-audio DAC onset (rest command issued)
-            #           end   = stop-audio DAC end + STOP_PAUSE_MS (rest period over)
+            #           end   = stop-audio DAC end + COMMAND_STOP (rest period over)
             #           The 10s rest window begins at start + stop_audio_duration.
             side = stim.get('side', 'right' if 'right' in stim_type else 'left')
             cycle_num = stim.get('cycle_num', 0)
@@ -524,7 +522,7 @@ class AuditoryStimulator:
             keep_dac     = keep_event.get('dac_onset_time') if keep_event else None
             stop_dac     = stop_event.get('dac_onset_time') if stop_event else None
             stop_dac_end = stop_event.get('dac_end_time')   if stop_event else None
-            stop_end = (stop_dac_end + CommandStimParams.STOP_PAUSE_MS / 1000.0
+            stop_end = (stop_dac_end + PostStimulusWaitMS.COMMAND_STOP / 1000.0
                         if stop_dac_end is not None else None)
 
             cycle_label = f"cycle {cycle_num + 1} of {total_cycles}"

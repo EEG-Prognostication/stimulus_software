@@ -352,7 +352,7 @@ class AuditoryStimulator:
 
             def _onset_handler(dac_time: Optional[float], _event: dict = event,
                                 _dur: float = duration_sec) -> None:
-                if not dac_time:
+                if dac_time is None:
                     logger.warning(
                         f"outputBufferDacTime is {dac_time!r} for '{log_label}'; "
                         "DAC time will be missing in CSV. "

@@ -98,6 +98,7 @@ class TkApp:
     
     def _initialize_variables(self):
         """Initialize Tkinter variables for UI."""
+        self._display_chunks = []
         self.language_var = tk.BooleanVar()
         self.right_cmd_var = tk.BooleanVar()
         self.rcmd_prompt_var = tk.BooleanVar()
@@ -552,10 +553,6 @@ class TkApp:
             logger.warning("Confirm files pressed but files not ready")
             return
 
-        if self.analysis_files.stimulus_path is None or self.analysis_files.edf_path is None:
-            logger.error("Files were not ready despite ready check - this should not happen")
-            return
-
         stim_path = self.analysis_files.stimulus_path
         edf_path  = self.analysis_files.edf_path
         logger.info(f"Files confirmed — Stimulus: {stim_path.name}, EDF: {edf_path.name}")
@@ -623,47 +620,62 @@ class TkApp:
         self.populate_stim_list()
         logger.info("Stimulus order randomized")
 
+    def _compute_display_chunks(self):
+        """Group consecutive command blocks into single display rows.
+
+        Returns a list of dicts: {iid, label, indices} where indices is the
+        list of stim_dictionary positions that belong to this display row.
+        """
+        result = []
+        block_count = {}
+        pos = 0
+        for group in self.stims.iter_chunks(self.stims.stim_dictionary):
+            stim_type = group[0]['type']
+            label = STIMULUS_TYPE_DISPLAY_NAMES.get(
+                stim_type, stim_type.replace('_', ' ').title()
+            )
+            if len(group) > 1:
+                block_count[stim_type] = block_count.get(stim_type, 0) + 1
+                iid = f'b_{stim_type}_{block_count[stim_type]}'
+            else:
+                iid = str(pos)
+            result.append({'iid': iid, 'label': label,
+                           'indices': list(range(pos, pos + len(group)))})
+            pos += len(group)
+        return result
+
     def populate_stim_list(self):
-        """Populate the stimulus list Treeview."""
+        """Populate the stimulus list Treeview, collapsing command blocks."""
         logger.debug(f"Populating stimulus list with "
                     f"{len(self.stims.stim_dictionary)} stimuli")
-        
-        # Clear existing items
         for item in self.stim_tree.get_children():
             self.stim_tree.delete(item)
-        
-        # Insert each stimulus
-        for idx, stim in enumerate(self.stims.stim_dictionary):
-            stim_type = stim['type']
-            display_type = STIMULUS_TYPE_DISPLAY_NAMES.get(
-                stim_type, 
-                stim_type.replace('_', ' ').title()
-            )
-            status = stim['status'].title()
-            self.stim_tree.insert('', 'end', iid=str(idx), 
-                                 values=(display_type, status))
-    
+        self._display_chunks = self._compute_display_chunks()
+        for chunk in self._display_chunks:
+            self.stim_tree.insert('', 'end', iid=chunk['iid'],
+                                  values=(chunk['label'], 'Pending'),
+                                  tags=('pending',))
+
     def update_stim_list_status(self):
-        """Update the status column in the stimulus list."""
-        for idx, stim in enumerate(self.stims.stim_dictionary):
-            if str(idx) in self.stim_tree.get_children():
-                display_type = STIMULUS_TYPE_DISPLAY_NAMES.get(
-                    stim['type'], 
-                    stim['type'].replace('_', ' ').title()
-                )
-                status = stim['status'].title()
-                
-                # Determine tag
-                status_key = stim['status'].lower()
-                if 'complete' in status_key:
-                    tag = 'completed'
-                elif 'in progress' in status_key:
-                    tag = 'inprogress'
-                else:
-                    tag = 'pending'
-                
-                self.stim_tree.item(str(idx), values=(display_type, status), 
-                                   tags=(tag,))
+        """Update the status column, aggregating pair statuses within blocks."""
+        for chunk in self._display_chunks:
+            iid = chunk['iid']
+            if iid not in self.stim_tree.get_children():
+                continue
+            statuses = [self.stims.stim_dictionary[i]['status'].lower()
+                        for i in chunk['indices']]
+            if all('complete' in s for s in statuses):
+                status_text, tag = 'Complete', 'completed'
+            elif any('in progress' in s for s in statuses):
+                status_text, tag = 'In Progress', 'inprogress'
+            elif any('complete' in s for s in statuses):
+                n_done = sum(1 for s in statuses if 'complete' in s)
+                status_text = f'{n_done}/{len(statuses)} done'
+                tag = 'inprogress'
+            else:
+                status_text, tag = 'Pending', 'pending'
+            self.stim_tree.item(iid, values=(chunk['label'], status_text),
+                                tags=(tag,))
     
     def toggle_prompts(self):
         """Toggle prompt checkboxes based on main stimulus selection."""
@@ -747,47 +759,40 @@ class TkApp:
         self._apply_ctrl_btn(self.sync_pulse_button, states['sync']    == 'normal')
         self._apply_ctrl_btn(self.randomize_button,  states['randomize'] == 'normal' and has_stims)
     
+    @staticmethod
+    def _list_csv_files():
+        if not FilePaths.RESULTS_DIR.exists():
+            return []
+        return sorted(f.name for f in FilePaths.RESULTS_DIR.glob('*.csv'))
+
+    @staticmethod
+    def _list_edf_files():
+        if not FilePaths.EDFS_DIR.exists():
+            return []
+        return sorted(f.name for f in FilePaths.EDFS_DIR.iterdir()
+                      if f.suffix.lower() == '.edf')
+
     def load_file_options(self):
-        """Populate file selection dropdowns."""
-        # Stimulus CSVs
-        stim_files = []
-        if FilePaths.RESULTS_DIR.exists():
-            stim_files = sorted([f.name for f in FilePaths.RESULTS_DIR.glob('*.csv')])
-
+        """Populate file selection dropdowns (resets to placeholder)."""
+        stim_files = self._list_csv_files()
         self.stimulus_combo['values'] = stim_files
-        if stim_files:
-            self.stimulus_combo.set("Select a stimulus file...")
-        else:
-            self.stimulus_combo.set("No CSV files found")
+        self.stimulus_combo.set("Select a stimulus file..." if stim_files else "No CSV files found")
 
-        # EDF files (case-insensitive glob for .edf/.EDF)
-        edf_files = []
-        if FilePaths.EDFS_DIR.exists():
-            edf_files = sorted([f.name for f in FilePaths.EDFS_DIR.iterdir()
-                               if f.suffix.lower() == '.edf'])
-        
+        edf_files = self._list_edf_files()
         self.edf_combo['values'] = edf_files
-        if edf_files:
-            self.edf_combo.set("Select an EDF file...")
-        else:
-            self.edf_combo.set("No EDF files found")
+        self.edf_combo.set("Select an EDF file..." if edf_files else "No EDF files found")
 
     def _refresh_edf_options(self):
-        """Refresh EDF file list when the dropdown is opened."""
-        edf_files = []
-        if FilePaths.EDFS_DIR.exists():
-            edf_files = sorted([f.name for f in FilePaths.EDFS_DIR.iterdir()
-                                if f.suffix.lower() == '.edf'])
+        """Refresh EDF file list when the dropdown is opened, preserving selection."""
+        edf_files = self._list_edf_files()
         current = self.edf_combo.get()
         self.edf_combo['values'] = edf_files
         if current not in edf_files:
             self.edf_combo.set("Select an EDF file..." if edf_files else "No EDF files found")
 
     def _refresh_stimulus_options(self):
-        """Refresh stimulus CSV list when the dropdown is opened."""
-        stim_files = []
-        if FilePaths.RESULTS_DIR.exists():
-            stim_files = sorted([f.name for f in FilePaths.RESULTS_DIR.glob('*.csv')])
+        """Refresh stimulus CSV list when the dropdown is opened, preserving selection."""
+        stim_files = self._list_csv_files()
         current = self.stimulus_combo.get()
         self.stimulus_combo['values'] = stim_files
         if current not in stim_files:

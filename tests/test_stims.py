@@ -327,7 +327,7 @@ class TestRandomizeStimOrder:
         after = sorted(s['type'] for s in stims_instance.stim_dictionary)
 
         assert before == after
-        assert len(stims_instance.stim_dictionary) == 3 + 5 + 16
+        assert len(stims_instance.stim_dictionary) == 3 + 5 + 2 * CommandStimParams.TOTAL_CYCLES
 
     @patch('lib.stims.AudioSegment.from_mp3')
     def test_command_pairs_can_be_interleaved(self, mock_from_mp3, stims_instance):

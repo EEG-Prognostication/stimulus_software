@@ -59,12 +59,12 @@ class PostStimulusWaitMS:
 
 
 DEFAULT_STIMULUS_COUNTS = {
-    'language': 72,
+    'language': 0,
     'command_no_prompt': 3,
     'command_with_prompt': 3,
     'oddball_no_prompt': 8,
     'oddball_with_prompt': 8,
-    'familiar_voice': 50
+    'familiar_voice': 80
 }
 
 

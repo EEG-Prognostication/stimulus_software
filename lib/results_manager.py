@@ -5,6 +5,7 @@ Results management for the EEG Stimulus Package.
 Handles thread-safe CSV writing and result storage.
 """
 
+import csv
 import json
 import logging
 import threading
@@ -53,7 +54,8 @@ class ResultsManager:
         with self._write_lock:
             if not filepath.exists():
                 filepath.parent.mkdir(parents=True, exist_ok=True)
-                pd.DataFrame(columns=self.COLUMNS).to_csv(filepath, index=False)
+                with open(filepath, 'w', newline='') as f:
+                    csv.writer(f).writerow(self.COLUMNS)
                 logger.info(f"Initialized CSV file: {filepath}")
             else:
                 logger.debug(f"CSV file already exists: {filepath}")
@@ -131,30 +133,18 @@ class ResultsManager:
     
     def _write_row(self, filepath: Path, row: Dict[str, Any]):
         """Write a single row to CSV file.
-        
-        Args:
-            filepath: Path to CSV file
-            row: Row data to write
-            
+
         Raises:
             ResultsFileError: If write fails
         """
         try:
-            # Ensure directory exists
             filepath.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Check if file exists to determine if we need header
             file_exists = filepath.exists()
-            
-            # Create DataFrame and write
-            df = pd.DataFrame([row])
-            df.to_csv(
-                filepath,
-                mode='a',
-                header=not file_exists,
-                index=False
-            )
-            
+            with open(filepath, 'a', newline='') as f:
+                writer = csv.writer(f)
+                if not file_exists:
+                    writer.writerow(self.COLUMNS)
+                writer.writerow([row.get(c, '') for c in self.COLUMNS])
         except Exception as e:
             raise ResultsFileError(f"Failed to write to {filepath}: {e}") from e
     

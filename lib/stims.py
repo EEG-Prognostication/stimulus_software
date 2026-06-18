@@ -74,13 +74,13 @@ class Stims:
 
         # Right command (no prompt) — one stim dict per keep+stop pair
         if num_of_each_stims.get("rcmd", 0) > 0:
-            n_runs = num_of_each_stims["rcmd"]
-            logger.info(f"Loading right command audio for {n_runs} runs "
-                        f"({n_runs * CommandStimParams.TOTAL_CYCLES} pairs)")
+            n_blocks = num_of_each_stims["rcmd"]
+            logger.info(f"Loading right command audio for {n_blocks} blocks "
+                        f"({n_blocks * CommandStimParams.TOTAL_CYCLES} pairs)")
             self.right_keep_audio = AudioSegment.from_mp3(FilePaths.RIGHT_KEEP_AUDIO)
             self.right_stop_audio = AudioSegment.from_mp3(FilePaths.RIGHT_STOP_AUDIO)
             rcmd_block = []
-            for _ in range(n_runs):
+            for _ in range(n_blocks):
                 for cycle in range(CommandStimParams.TOTAL_CYCLES):
                     rcmd_block.append({
                         "type": "right_command",
@@ -93,16 +93,16 @@ class Stims:
             blocks.append(rcmd_block)
             logger.debug(f"Added {len(rcmd_block)} right command pairs")
 
-        # Right command + prompt — prompt plays only on the first pair of each run
+        # Right command + prompt — prompt plays only on the first pair of each block
         if num_of_each_stims.get("rcmd+p", 0) > 0:
-            n_runs = num_of_each_stims["rcmd+p"]
-            logger.info(f"Loading right command+prompt audio for {n_runs} runs "
-                        f"({n_runs * CommandStimParams.TOTAL_CYCLES} pairs)")
+            n_blocks = num_of_each_stims["rcmd+p"]
+            logger.info(f"Loading right command+prompt audio for {n_blocks} blocks "
+                        f"({n_blocks * CommandStimParams.TOTAL_CYCLES} pairs)")
             self.motor_prompt_audio = AudioSegment.from_wav(FilePaths.MOTOR_PROMPT)
             self.right_keep_audio = AudioSegment.from_mp3(FilePaths.RIGHT_KEEP_AUDIO)
             self.right_stop_audio = AudioSegment.from_mp3(FilePaths.RIGHT_STOP_AUDIO)
             rcmd_p_block = []
-            for _ in range(n_runs):
+            for _ in range(n_blocks):
                 for cycle in range(CommandStimParams.TOTAL_CYCLES):
                     rcmd_p_block.append({
                         "type": "right_command",
@@ -117,13 +117,13 @@ class Stims:
 
         # Left command (no prompt)
         if num_of_each_stims.get("lcmd", 0) > 0:
-            n_runs = num_of_each_stims["lcmd"]
-            logger.info(f"Loading left command audio for {n_runs} runs "
-                        f"({n_runs * CommandStimParams.TOTAL_CYCLES} pairs)")
+            n_blocks = num_of_each_stims["lcmd"]
+            logger.info(f"Loading left command audio for {n_blocks} blocks "
+                        f"({n_blocks * CommandStimParams.TOTAL_CYCLES} pairs)")
             self.left_keep_audio = AudioSegment.from_mp3(FilePaths.LEFT_KEEP_AUDIO)
             self.left_stop_audio = AudioSegment.from_mp3(FilePaths.LEFT_STOP_AUDIO)
             lcmd_block = []
-            for _ in range(n_runs):
+            for _ in range(n_blocks):
                 for cycle in range(CommandStimParams.TOTAL_CYCLES):
                     lcmd_block.append({
                         "type": "left_command",
@@ -136,16 +136,16 @@ class Stims:
             blocks.append(lcmd_block)
             logger.debug(f"Added {len(lcmd_block)} left command pairs")
 
-        # Left command + prompt — prompt plays only on the first pair of each run
+        # Left command + prompt — prompt plays only on the first pair of each block
         if num_of_each_stims.get("lcmd+p", 0) > 0:
-            n_runs = num_of_each_stims["lcmd+p"]
-            logger.info(f"Loading left command+prompt audio for {n_runs} runs "
-                        f"({n_runs * CommandStimParams.TOTAL_CYCLES} pairs)")
+            n_blocks = num_of_each_stims["lcmd+p"]
+            logger.info(f"Loading left command+prompt audio for {n_blocks} blocks "
+                        f"({n_blocks * CommandStimParams.TOTAL_CYCLES} pairs)")
             self.motor_prompt_audio = AudioSegment.from_wav(FilePaths.MOTOR_PROMPT)
             self.left_keep_audio = AudioSegment.from_mp3(FilePaths.LEFT_KEEP_AUDIO)
             self.left_stop_audio = AudioSegment.from_mp3(FilePaths.LEFT_STOP_AUDIO)
             lcmd_p_block = []
-            for _ in range(n_runs):
+            for _ in range(n_blocks):
                 for cycle in range(CommandStimParams.TOTAL_CYCLES):
                     lcmd_p_block.append({
                         "type": "left_command",
@@ -245,13 +245,31 @@ class Stims:
             stim_summary[stim_type] = stim_summary.get(stim_type, 0) + 1
         logger.info(f"Stimulus type summary: {stim_summary}")
 
-    def randomize_stim_order(self):
-        """Re-shuffle the order of prepared stimuli.
+    @staticmethod
+    def iter_chunks(stim_dictionary):
+        """Yield atomic shuffle/display chunks from a stim_dictionary.
 
-        Each stim dict (including each command keep+stop pair) is an
-        independent trial, so the full list can be shuffled directly.
+        Command blocks (cycle_num 0..total_cycles-1) are yielded as one list.
+        All other stimulus types yield a single-element list.
         """
-        random.shuffle(self.stim_dictionary)
+        i = 0
+        while i < len(stim_dictionary):
+            stim = stim_dictionary[i]
+            total = stim.get('total_cycles', 1)
+            if (stim['type'] in ('right_command', 'left_command')
+                    and stim.get('cycle_num', -1) == 0
+                    and total > 1):
+                yield stim_dictionary[i:i + total]
+                i += total
+            else:
+                yield [stim]
+                i += 1
+
+    def randomize_stim_order(self):
+        """Re-shuffle the order of prepared stimuli (command blocks as atomic units)."""
+        chunks = list(self.iter_chunks(self.stim_dictionary))
+        random.shuffle(chunks)
+        self.stim_dictionary = [s for chunk in chunks for s in chunk]
         logger.info(f"Stimulus order randomized: {len(self.stim_dictionary)} stimuli")
 
     def _generate_language_stimuli(self, num_of_lang_stims):
